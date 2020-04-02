@@ -87,6 +87,10 @@
 # include <GeomFill_SectionGenerator.hxx>
 # include <NCollection_List.hxx>
 # include <BRepFill_Filling.hxx>
+# include <HLRBRep_Algo.hxx>
+# include <HLRAlgo_Projector.hxx>
+# include <HLRBRep_HLRToShape.hxx>
+# include <BRep_Builder.hxx>
 #endif
 
 #include <cstdio>
@@ -292,6 +296,9 @@ public:
         );
         add_varargs_method("getFacets",&Module::getFacets,
             "getFacets(shape): simplified mesh generation"
+        );
+        add_varargs_method("getProjection",&Module::getProjection,
+            "getProjection(shape): get Projection of shape"
         );
         add_varargs_method("makeCompound",&Module::makeCompound,
             "makeCompound(list) -- Create a compound out of a list of shapes."
@@ -767,6 +774,52 @@ private:
             }
         }     
         return Py::asObject(list);
+    }
+    static bool comparePoint(gp_Pnt p1, gp_Pnt p2){
+        if (p1.X() != p2.X())
+            return p1.X() > p2.X();
+        else if (p1.Y() != p2.Y())
+            return  p1.Y() > p2.Y();
+        else
+            return p1.Z() > p2.Z();
+    }
+    Py::Object getProjection(const Py::Tuple& args)
+    {
+        PyObject *shape;
+        if (!PyArg_ParseTuple(args.ptr(), "O", &shape)) 
+            throw Py::Exception();
+        auto shape_in = static_cast<Part::TopoShapePy*>(shape)->getTopoShapePtr()->getShape();
+        gp_Dir dir(0,0,1);
+        Handle_HLRBRep_Algo brep_hlr = NULL;
+        brep_hlr = new HLRBRep_Algo();
+        brep_hlr->Add(shape_in, 0);
+        HLRAlgo_Projector projector(gp_Ax2(gp_Pnt(),dir));
+        brep_hlr->Projector(projector);
+        brep_hlr->Update();
+        brep_hlr->Hide();
+        HLRBRep_HLRToShape hlrToShape(brep_hlr);
+        BRep_Builder builder;
+        TopoDS_Compound Comp;
+        TopoDS_Shape vshape = hlrToShape.VCompound();
+        TopoDS_Shape oshape = hlrToShape.OutLineVCompound();
+        builder.MakeCompound(Comp);
+        if(!vshape.IsNull())
+            builder.Add(Comp, vshape);
+        if(!oshape.IsNull())
+            builder.Add(Comp, oshape);
+        TopExp_Explorer Ex;
+        std::vector<gp_Pnt> points;
+        for (Ex.Init(Comp,TopAbs_VERTEX); Ex.More();Ex.Next()) {
+            TopoDS_Vertex vert = TopoDS::Vertex(Ex.Current());
+            points.push_back(BRep_Tool::Pnt(vert));
+        }
+        Base::Console().Error("%d Points found\n", points.size());
+        std::sort(points.begin(), points.end(), comparePoint);
+        auto last = std::unique(points.begin(), points.end(), [](const gp_Pnt & first, const gp_Pnt & second) { return first.IsEqual(second, 0.001); });
+        points.erase(last, points.end()); 
+        Base::Console().Error("%d Unique Points found\n", points.size());
+        Py::Object sret(shape2pyshape(Comp));
+        return sret;
     }
     Py::Object makeCompound(const Py::Tuple& args)
     {

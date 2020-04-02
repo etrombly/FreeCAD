@@ -312,6 +312,10 @@ def getEnvelope(partshape, subshape=None, depthparams=None):
         area.setPlane(makeWorkplane(partshape))
         sec = area.makeSections(heights=[0.0], project=True)[0].getShape()
 
+    test = Part.getProjection(partshape)
+    T = FreeCAD.ActiveDocument.addObject('Part::Feature', 'projection')
+    T.Shape = test
+
     # If depthparams are passed, use it to calculate bottom and height of
     # envelope
     if depthparams is not None:
