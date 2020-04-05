@@ -87,10 +87,23 @@
 # include <GeomFill_SectionGenerator.hxx>
 # include <NCollection_List.hxx>
 # include <BRepFill_Filling.hxx>
+
 # include <HLRBRep_Algo.hxx>
 # include <HLRAlgo_Projector.hxx>
 # include <HLRBRep_HLRToShape.hxx>
 # include <BRep_Builder.hxx>
+# include <GCPnts_UniformAbscissa.hxx>
+# include <BRepBuilderAPI_MakeVertex.hxx>
+# include <BRepAlgoAPI_Section.hxx>
+# include <BRepAdaptor_Curve2d.hxx>
+# include <Geom2dAdaptor_Curve.hxx>
+# include <BRep_TEdge.hxx>
+# include <BRep_ListOfCurveRepresentation.hxx>
+# include <BRep_CurveRepresentation.hxx>
+# include <BRepLib_MakeFace.hxx>
+# include <BRepBuilderAPI_MakeEdge.hxx>
+# include <ShapeAnalysis_Surface.hxx>
+# include "Mod/Mesh/App/Core/KDTree.h"
 #endif
 
 #include <cstdio>
@@ -789,6 +802,7 @@ private:
         if (!PyArg_ParseTuple(args.ptr(), "O", &shape)) 
             throw Py::Exception();
         auto shape_in = static_cast<Part::TopoShapePy*>(shape)->getTopoShapePtr()->getShape();
+        // Project shape to 2d in z direction 1
         gp_Dir dir(0,0,1);
         Handle_HLRBRep_Algo brep_hlr = NULL;
         brep_hlr = new HLRBRep_Algo();
@@ -798,10 +812,11 @@ private:
         brep_hlr->Update();
         brep_hlr->Hide();
         HLRBRep_HLRToShape hlrToShape(brep_hlr);
+        // select the visual and outline compounds from the projection
         BRep_Builder builder;
         TopoDS_Compound Comp;
-        TopoDS_Shape vshape = hlrToShape.VCompound();
-        TopoDS_Shape oshape = hlrToShape.OutLineVCompound();
+        TopoDS_Shape vshape = hlrToShape.VCompound(); // sharp edges
+        TopoDS_Shape oshape = hlrToShape.OutLineVCompound(); // outline
         builder.MakeCompound(Comp);
         if(!vshape.IsNull())
             builder.Add(Comp, vshape);
@@ -809,16 +824,68 @@ private:
             builder.Add(Comp, oshape);
         TopExp_Explorer Ex;
         std::vector<gp_Pnt> points;
+        // convert curves into vertices
+        for (Ex.Init(Comp,TopAbs_EDGE); Ex.More();Ex.Next()) {
+            TopoDS_Edge edge = TopoDS::Edge(Ex.Current());
+            if(BRepLib::BuildCurve3d(edge)){
+                BRepAdaptor_Curve gac(edge);
+                GCPnts_UniformAbscissa algo(gac, 0.5);
+                if (algo.IsDone())
+                {
+                    for (int i = 1; i <= algo.NbPoints(); i++)
+                    {
+                        gp_Pnt p = gac.Value(algo.Parameter(i));
+                        points.push_back(p);
+                    }
+                }
+            }
+        }
+        // get all the vertices from the shape
         for (Ex.Init(Comp,TopAbs_VERTEX); Ex.More();Ex.Next()) {
             TopoDS_Vertex vert = TopoDS::Vertex(Ex.Current());
-            points.push_back(BRep_Tool::Pnt(vert));
+            gp_Pnt p = BRep_Tool::Pnt(vert);
+            points.push_back(p);
         }
-        Base::Console().Error("%d Points found\n", points.size());
+        Base::Console().Error("%d Points\n", points.size());
         std::sort(points.begin(), points.end(), comparePoint);
-        auto last = std::unique(points.begin(), points.end(), [](const gp_Pnt & first, const gp_Pnt & second) { return first.IsEqual(second, 0.001); });
-        points.erase(last, points.end()); 
-        Base::Console().Error("%d Unique Points found\n", points.size());
-        Py::Object sret(shape2pyshape(Comp));
+        auto it = std::unique(points.begin(),points.end(), [] (const gp_Pnt& p1, const gp_Pnt& p2){return p1.IsEqual(p2, 0.1);});
+        points.erase(it, points.end());
+        /*
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+        for (gp_Pnt& p: points)
+            cloud->push_back(pcl::PointXYZ (p.X(), p.Y(), p.Z()));
+        pcl::ConcaveHull<pcl::PointXYZ> chull;
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull (new pcl::PointCloud<pcl::PointXYZ>);
+        std::vector<pcl::Vertices> verts;
+        chull.setInputCloud (cloud);
+        chull.setAlpha (80.0);
+        chull.reconstruct (*cloud_hull);
+        auto size = cloud_hull->points.size();
+        Base::Console().Error("%d Points in cloud\n", cloud->points.size());
+        Base::Console().Error("%d Points found in hull\n", size);
+        gp_Pnt last = gp_Pnt(cloud_hull->points[0].x, cloud_hull->points[0].y, cloud_hull->points[0].z);
+        BRepBuilderAPI_MakeWire wire;
+        for(unsigned int i = 1; i < size; i++){
+            Base::Console().Error("%d (%f, %f, %f) (%f, %f, %f))\n", i, last.X(), last.Y(), last.Z(), cloud_hull->points[i].x, cloud_hull->points[i].y, cloud_hull->points[i].z);
+            gp_Pnt current = gp_Pnt(cloud_hull->points[i].x, cloud_hull->points[i].y, cloud_hull->points[i].z);
+            if(last.IsEqual(current, 0.1)){
+                Base::Console().Error("skipping");
+            } else {
+                TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(last, current).Edge();
+                wire.Add(edge);
+            }
+            last = current;
+        }
+        */
+        TopoDS_Compound PCloud;
+        builder.MakeCompound(PCloud);
+        for (gp_Pnt& p: points){
+            TopoDS_Vertex v = BRepBuilderAPI_MakeVertex(p);
+            builder.Add(PCloud, v);
+        }
+        //wire.Build();
+        //TopoDS_Wire newWire = wire.Wire();
+        Py::Object sret(shape2pyshape(PCloud));
         return sret;
     }
     Py::Object makeCompound(const Py::Tuple& args)

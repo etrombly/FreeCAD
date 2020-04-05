@@ -38,7 +38,7 @@ from PathScripts import PathLog
 from PySide import QtCore
 from PySide import QtGui
 
-PathLog.setLevel(PathLog.Level.INFO, PathLog.thisModule())
+PathLog.setLevel(PathLog.Level.DEBUG, PathLog.thisModule())
 #PathLog.trackModule(PathLog.thisModule())
 
 
@@ -303,18 +303,20 @@ def getEnvelope(partshape, subshape=None, depthparams=None):
             area = Path.Area(Fill=2, Coplanar=0).add(subshape)
             area.setPlane(makeWorkplane(partshape))
             PathLog.debug("About to section with params: {}".format(area.getParams()))
-            sec = area.makeSections(heights=[0.0], project=True)[0].getShape()
+            #sec = area.makeSections(heights=[0.0], project=True)[0].getShape()
+            sec = Part.getProjection(subshape)
 
         PathLog.debug('partshapeZmin: {}, subshapeZMin: {}, zShift: {}'.format(partshape.BoundBox.ZMin, subshape.BoundBox.ZMin, zShift))
 
     else:
         area = Path.Area(Fill=2, Coplanar=0).add(partshape)
         area.setPlane(makeWorkplane(partshape))
-        sec = area.makeSections(heights=[0.0], project=True)[0].getShape()
+        #sec = area.makeSections(heights=[0.0], project=True)[0].getShape()
+        sec = Part.getProjection(partshape)
 
-    test = Part.getProjection(partshape)
+    
     T = FreeCAD.ActiveDocument.addObject('Part::Feature', 'projection')
-    T.Shape = test
+    T.Shape = sec
 
     # If depthparams are passed, use it to calculate bottom and height of
     # envelope

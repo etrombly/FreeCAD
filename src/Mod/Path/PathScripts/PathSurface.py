@@ -50,7 +50,7 @@ __author__ = "sliptonic (Brad Collette)"
 __url__ = "http://www.freecadweb.org"
 __doc__ = "Class and implementation of Mill Facing operation."
 
-PathLog.setLevel(PathLog.Level.INFO, PathLog.thisModule())
+PathLog.setLevel(PathLog.Level.DEBUG, PathLog.thisModule())
 # PathLog.trackModule(PathLog.thisModule())
 
 
@@ -738,19 +738,24 @@ class ObjectSurface(PathOp.ObjectOp):
                 for (fcshp, fcIdx) in FACES[m]:
                     fNum = fcIdx + 1
                     fsL.append(fcshp)
-                    gFW = self._getFaceWires(base, fcshp, fcIdx)
-                    if gFW is False:
-                        PathLog.debug('Failed to get wires from Face{}'.format(fNum))
-                    elif gFW[0] is False:
-                        PathLog.debug('Cannot process Face{}. Check that it has horizontal surface exposure.'.format(fNum))
-                    else:
-                        ((otrFace, raised), intWires) = gFW
-                        outFCS.append(otrFace)
-                        if obj.InternalFeaturesCut is False:
-                            if intWires is not False:
-                                for (iFace, rsd) in intWires:
-                                    ifL.append(iFace)
+                    #gFW = self._getFaceWires(base, fcshp, fcIdx)
+                    gFW = Part.getProjection(fcshp)
+                    T = FreeCAD.ActiveDocument.addObject('Part::Feature', 'faceProj')
+                    T.Shape = gFW
+                    outFCS.append(gFW)
+                    #if gFW is False:
+                    #    PathLog.debug('Failed to get wires from Face{}'.format(fNum))
+                    #elif gFW[0] is False:
+                    #    PathLog.debug('Cannot process Face{}. Check that it has horizontal surface exposure.'.format(fNum))
+                    #else:
+                    #    ((otrFace, raised), intWires) = gFW
+                    #    outFCS.append(otrFace)
+                    #    if obj.InternalFeaturesCut is False:
+                    #        if intWires is not False:
+                    #            for (iFace, rsd) in intWires:
+                    #                ifL.append(iFace)
 
+            
                 PathLog.debug('Attempting to get cross-section of collective faces.')
                 if len(outFCS) == 0:
                     PathLog.error('Cannot process selected faces. Check horizontal surface exposure.'.format(fNum))
