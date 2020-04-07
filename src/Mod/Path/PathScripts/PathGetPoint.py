@@ -22,7 +22,6 @@
 # *                                                                         *
 # ***************************************************************************
 
-import Draft
 import FreeCAD
 import FreeCADGui
 import PathScripts.PathLog as PathLog
@@ -104,6 +103,7 @@ class TaskPanel:
         creates a dotted line indicating from where the original point started from.
         If start is specified the Snapper UI is closed on the first point the user enters. If start remains None, then Snapper is kept open
         until the user explicitly closes Snapper. This lets the user enter multiple points in quick succession.'''
+        import Draft
 
         def displayPoint(p):
             self.point = p

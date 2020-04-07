@@ -28,7 +28,6 @@ import PathScripts.PathLog as PathLog
 import PathScripts.PathOp as PathOp
 import PathScripts.PathUtils as PathUtils
 import PathScripts.PathGeom as PathGeom
-import Draft
 import math
 import Part
 
@@ -889,6 +888,7 @@ class ObjectOp(PathOp.ObjectOp):
             Create temp clone and stock and apply rotation to both.
             Return new rotated clones
         '''
+        import Draft
         if axis == 'X':
             vect = FreeCAD.Vector(1, 0, 0)
         elif axis == 'Y':
@@ -913,6 +913,7 @@ class ObjectOp(PathOp.ObjectOp):
     def applyInverseAngle(self, obj, clnBase, clnStock, axis, angle):
         '''applyInverseAngle(obj, clnBase, clnStock, axis, angle)
             Apply rotations to incoming base and stock objects.'''
+        import Draft
         if axis == 'X':
             vect = FreeCAD.Vector(1, 0, 0)
         elif axis == 'Y':

@@ -36,7 +36,6 @@ from PySide import QtCore
 import time
 import math
 import Part
-import Draft
 
 if FreeCAD.GuiUp:
     import FreeCADGui
@@ -1308,6 +1307,7 @@ class ObjectWaterline(PathOp.ObjectOp):
         return False
 
     def _getProjectedFace(self, wire):
+        import Draft
         PathLog.debug('_getProjectedFace()')
         F = FreeCAD.ActiveDocument.addObject('Part::Feature', 'tmpProjectionWire')
         F.Shape = wire

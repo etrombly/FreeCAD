@@ -30,9 +30,8 @@ import PathScripts.PathLog as PathLog
 import PathScripts.PathOp as PathOp
 import PathScripts.PathPocketBase as PathPocketBase
 import PathScripts.PathUtils as PathUtils
-import TechDraw
+#import TechDraw
 import math
-import Draft
 
 from PySide import QtCore
 

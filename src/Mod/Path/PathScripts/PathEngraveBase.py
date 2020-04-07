@@ -22,7 +22,6 @@
 # *                                                                         *
 # ***************************************************************************
 
-import DraftGeomUtils
 import Path
 import PathScripts.PathGeom as PathGeom
 import PathScripts.PathLog as PathLog
@@ -62,6 +61,7 @@ class ObjectOp(PathOp.ObjectOp):
     def buildpathocc(self, obj, wires, zValues, relZ=False, forward=True, start_idx=0):
         '''buildpathocc(obj, wires, zValues, relZ=False) ... internal helper function to generate engraving commands.'''
         PathLog.track(obj.Label, len(wires), zValues)
+        import DraftGeomUtils
 
         for wire in wires:
             offset = wire

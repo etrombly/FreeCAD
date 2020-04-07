@@ -28,9 +28,7 @@
 # *                                                                         *
 # ***************************************************************************
 
-import ArchPanel
 import FreeCAD
-import DraftGeomUtils
 import Part
 import PathScripts.PathLog as PathLog
 import PathScripts.PathOp as PathOp
@@ -40,7 +38,6 @@ from PySide import QtCore
 import PathScripts.PathGeom as PathGeom
 
 import math
-import Draft
 if FreeCAD.GuiUp:
     import FreeCADGui
 
@@ -98,6 +95,7 @@ class ObjectOp(PathOp.ObjectOp):
     def baseIsArchPanel(self, obj, base):
         '''baseIsArchPanel(obj, base) ... return true if op deals with an Arch.Panel.'''
         # pylint: disable=unused-argument
+        import ArchPanel
         return hasattr(base, "Proxy") and isinstance(base.Proxy, ArchPanel.PanelSheet)
 
     def getArchPanelEdge(self, obj, base, sub):
@@ -385,6 +383,7 @@ class ObjectOp(PathOp.ObjectOp):
 
     def findHoles(self, obj, baseobject):
         '''findHoles(obj, baseobject) ... inspect baseobject and identify all features that resemble a straight cricular hole.'''
+        import DraftGeomUtils
         shape = baseobject.Shape
         PathLog.track('obj: {} shape: {}'.format(obj, shape))
         holelist = []
@@ -772,6 +771,7 @@ class ObjectOp(PathOp.ObjectOp):
             Create temp clone and stock and apply rotation to both.
             Return new rotated clones
         '''
+        import Draft
         if axis == 'X':
             vect = FreeCAD.Vector(1, 0, 0)
         elif axis == 'Y':
@@ -796,6 +796,7 @@ class ObjectOp(PathOp.ObjectOp):
     def applyInverseAngle(self, obj, clnBase, clnStock, axis, angle):
         '''applyInverseAngle(obj, clnBase, clnStock, axis, angle)
             Apply rotations to incoming base and stock objects.'''
+        import Draft
         if axis == 'X':
             vect = FreeCAD.Vector(1, 0, 0)
         elif axis == 'Y':

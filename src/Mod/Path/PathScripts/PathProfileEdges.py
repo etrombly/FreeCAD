@@ -30,8 +30,7 @@ import PathScripts.PathOp as PathOp
 import PathScripts.PathProfileBase as PathProfileBase
 import PathScripts.PathUtils as PathUtils
 
-import DraftGeomUtils
-import Draft
+#import Draft
 import math
 import PySide
 
@@ -65,6 +64,7 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
     def areaOpShapes(self, obj):
         '''areaOpShapes(obj) ... returns envelope for all wires formed by the base edges.'''
         PathLog.track()
+        import DraftGeomUtils
 
         self.tmpGrp = FreeCAD.ActiveDocument.addObject('App::DocumentObjectGroup', 'tmpDebugGrp')
         tmpGrpNm = self.tmpGrp.Name

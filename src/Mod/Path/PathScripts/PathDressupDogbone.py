@@ -22,7 +22,7 @@
 # *                                                                         *
 # ***************************************************************************
 from __future__ import print_function
-import DraftGeomUtils
+#import DraftGeomUtils
 import FreeCAD
 import math
 import Part

@@ -22,8 +22,6 @@
 # *                                                                         *
 # ***************************************************************************
 
-import ArchPanel
-import Draft
 import FreeCAD
 import PathScripts.PathIconViewProvider as PathIconViewProvider
 import PathScripts.PathLog as PathLog
@@ -60,6 +58,7 @@ class JobTemplate:
     Version = 'Version'
 
 def isArchPanelSheet(obj):
+    import ArchPanel
     return hasattr(obj, 'Proxy') and isinstance(obj.Proxy, ArchPanel.PanelSheet)
 
 def isResourceClone(obj, propLink, resourceName):
@@ -72,7 +71,7 @@ def createResourceClone(obj, orig, name, icon):
     if isArchPanelSheet(orig):
         # can't clone panel sheets - they have to be panel sheets
         return orig
-
+    import Draft
     clone = Draft.clone(orig)
     clone.Label = "%s-%s" % (name, orig.Label)
     clone.addProperty('App::PropertyString', 'PathResource')

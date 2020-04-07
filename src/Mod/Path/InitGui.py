@@ -54,6 +54,11 @@ class PathWorkbench (Workbench):
         self.__class__.ToolTip = "Path workbench"
 
     def Initialize(self):
+        ######## DEBUG
+        import cProfile
+        pr = cProfile.Profile()
+        pr.enable()
+        #########
         global PathCommandGroup
 
         # Add preferences pages - before loading PathGui to properly order pages of Path group
@@ -144,6 +149,10 @@ class PathWorkbench (Workbench):
             Path.Area.setDefaultParams(Accuracy=curveAccuracy)
 
         Log('Loading Path workbench... done\n')
+        ######### DEBUG
+        pr.disable()
+        pr.dump_stats("/mnt/files/Downloads/profile.cprof")
+        ##################
 
     def GetClassName(self):
         return "Gui::PythonWorkbench"

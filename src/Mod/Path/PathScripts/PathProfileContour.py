@@ -24,7 +24,7 @@
 
 from __future__ import print_function
 
-import ArchPanel
+
 import FreeCAD
 import Part
 import Path
@@ -75,6 +75,7 @@ class ObjectContour(PathProfileBase.ObjectProfile):
         obj.Side = 'Outside'
 
     def areaOpShapes(self, obj):
+        import ArchPanel
         '''areaOpShapes(obj) ... return envelope over the job's Base.Shape or all Arch.Panel shapes.'''
         if obj.UseComp:
             self.commandlist.append(Path.Command("(Compensated Tool Path. Diameter: " + str(self.radius * 2) + ")"))

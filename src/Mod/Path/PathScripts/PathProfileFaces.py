@@ -23,7 +23,6 @@
 # *                                                                         *
 # ***************************************************************************
 
-import ArchPanel
 import FreeCAD
 import Part
 import Path
@@ -106,6 +105,7 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
             obj.setEditorMode('LimitDepthToFace', 0)
 
     def areaOpShapes(self, obj):
+        import ArchPanel
         '''areaOpShapes(obj) ... returns envelope for all base shapes or wires for Arch.Panels.'''
         PathLog.track()
 

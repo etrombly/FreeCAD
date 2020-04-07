@@ -22,7 +22,6 @@
 # *                                                                         *
 # ***************************************************************************
 import FreeCAD
-import DraftGeomUtils
 import Part
 import PathScripts.PathDressup as PathDressup
 import PathScripts.PathGeom as PathGeom
@@ -233,6 +232,7 @@ class ObjectDressup:
 
     def pointIsOnPath(self, obj, p):
         # pylint: disable=unused-argument
+        import DraftGeomUtils
         for e in self.edges:
             if DraftGeomUtils.isPtOnEdge(p, e):
                 return True

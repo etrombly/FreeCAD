@@ -1142,6 +1142,7 @@ PyObject* Application::sAddCommand(PyObject * /*self*/, PyObject *args)
 
     // get the call stack to find the Python module name
     //
+    
     std::string module, group;
     try {
         Base::PyGILStateLocker lock;

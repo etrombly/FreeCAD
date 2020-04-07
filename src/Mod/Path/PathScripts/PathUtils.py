@@ -27,11 +27,9 @@ import Part
 import Path
 import PathScripts
 import PathScripts.PathGeom as PathGeom
-import TechDraw
 import math
 import numpy
 
-from DraftGeomUtils import geomType
 from FreeCAD import Vector
 from PathScripts import PathJob
 from PathScripts import PathLog
@@ -197,6 +195,7 @@ def horizontalEdgeLoop(obj, edge):
 def horizontalFaceLoop(obj, face, faceList=None):
     '''horizontalFaceLoop(obj, face, faceList=None) ... returns a list of face names which form the walls of a vertical hole face is a part of.
     All face names listed in faceList must be part of the hole for the solution to be returned.'''
+    import TechDraw
 
     wires = [horizontalEdgeLoop(obj, e) for e in face.Edges]
     # Not sure if sorting by Area is a premature optimization - but it seems
@@ -334,6 +333,7 @@ def getEnvelope(partshape, subshape=None, depthparams=None):
 
 
 def reverseEdge(e):
+    from DraftGeomUtils import geomType
     if geomType(e) == "Circle":
         arcstpt = e.valueAt(e.FirstParameter)
         arcmid = e.valueAt((e.LastParameter - e.FirstParameter) * 0.5 + e.FirstParameter)

@@ -22,7 +22,6 @@
 # *                                                                         *
 # ***************************************************************************
 
-import ArchPanel
 import FreeCAD
 import Part
 import Path
@@ -75,6 +74,7 @@ class ObjectEngrave(PathEngraveBase.ObjectOp):
     def opExecute(self, obj):
         '''opExecute(obj) ... process engraving operation'''
         PathLog.track()
+        import ArchPanel
 
         jobshapes = []
 

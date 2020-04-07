@@ -22,15 +22,14 @@
 # *                                                                         *
 # ***************************************************************************
 
-import Draft
-import DraftVecUtils
+#import Draft
+#import DraftVecUtils
 import FreeCAD
 import FreeCADGui
 import PathScripts.PathJob as PathJob
 import PathScripts.PathJobCmd as PathJobCmd
 import PathScripts.PathJobDlg as PathJobDlg
 import PathScripts.PathGeom as PathGeom
-import PathScripts.PathGuiInit as PathGuiInit
 import PathScripts.PathLog as PathLog
 import PathScripts.PathPreferences as PathPreferences
 import PathScripts.PathSetupSheetGui as PathSetupSheetGui
@@ -1322,7 +1321,3 @@ def Create(base, template=None):
         PathLog.error(exc)
         traceback.print_exc()
         FreeCAD.ActiveDocument.abortTransaction()
-
-
-# make sure the UI has been initialized
-PathGuiInit.Startup()
