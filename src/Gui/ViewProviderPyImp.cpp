@@ -377,6 +377,22 @@ PyObject* ViewProviderPy::claimChildren(PyObject* args)
     return Py::new_reference_to(ret);
 }
 
+PyObject* ViewProviderPy::claimChildren3D(PyObject* args)
+{
+    if (!PyArg_ParseTuple(args, ""))
+        return NULL;                     // NULL triggers exception
+
+    std::vector<App::DocumentObject*> children = this->getViewProviderPtr()->claimChildren3D();
+    Py::List ret;
+    for(App::DocumentObject* child: children){
+        if (child)
+            ret.append(Py::asObject(child->getPyObject()));
+        else
+            ret.append(Py::None());
+    }
+    return Py::new_reference_to(ret);
+}
+
 PyObject* ViewProviderPy::partialRender(PyObject* args)
 {
     PyObject *value = Py_None;

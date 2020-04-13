@@ -55,6 +55,7 @@ public:
     // Returns the icon
     QIcon getIcon() const;
     bool claimChildren(std::vector<App::DocumentObject*>&) const;
+    bool claimChildren3D(std::vector<App::DocumentObject*>&) const;
     ValueT useNewSelectionModel() const;
     ValueT getElementPicked(const SoPickedPoint *pp, std::string &subname) const;
     bool getElement(const SoDetail *det, std::string &) const;
@@ -133,6 +134,7 @@ private:
 #define FC_PY_VIEW_OBJECT \
     FC_PY_ELEMENT(getIcon) \
     FC_PY_ELEMENT(claimChildren) \
+    FC_PY_ELEMENT(claimChildren3D) \
     FC_PY_ELEMENT(useNewSelectionModel) \
     FC_PY_ELEMENT(getElementPicked) \
     FC_PY_ELEMENT(getElement) \
@@ -218,6 +220,13 @@ public:
         std::vector<App::DocumentObject *> res;
         if(!imp->claimChildren(res))
             return ViewProviderT::claimChildren();
+        return res;
+    }
+
+    std::vector<App::DocumentObject*> claimChildren3D() const override {
+        std::vector<App::DocumentObject *> res;
+        if(!imp->claimChildren3D(res))
+            return ViewProviderT::claimChildren3D();
         return res;
     }
 

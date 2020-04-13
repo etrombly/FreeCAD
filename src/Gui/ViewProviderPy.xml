@@ -120,6 +120,11 @@ Returns 1 if succeeded, 0 if not found, -1 if not supported
 				<UserDocu>Returns list of objects that are to be grouped in tree under this object.</UserDocu>
 			</Documentation>
 		</Methode>
+    <Methode Name="claimChildren3D" Const="true">
+			<Documentation>
+				<UserDocu>Returns list of objects that are to be grouped in tree under this object.</UserDocu>
+			</Documentation>
+		</Methode>
         <Methode Name="partialRender">
 			<Documentation>
                 <UserDocu>

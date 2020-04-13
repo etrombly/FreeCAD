@@ -207,6 +207,23 @@ class ViewProvider:
         return ":/icons/Path-Job.svg"
 
     def claimChildren(self):
+        PathLog.info("Called python claimChildren\n")
+        children = self.obj.ToolController
+        children.append(self.obj.Operations)
+        if hasattr(self.obj, 'Model'):
+            # unfortunately this function is called before the object has been fully loaded
+            # which means we could be dealing with an old job which doesn't have the new Model
+            # yet.
+            children.append(self.obj.Model)
+        if self.obj.Stock:
+            children.append(self.obj.Stock)
+        if hasattr(self.obj, 'SetupSheet'):
+            # when loading a job that didn't have a setup sheet they might not've been created yet
+            children.append(self.obj.SetupSheet)
+        return children
+    
+    def claimChildren3D(self):
+        PathLog.info("Called python claimChildren3D\n")
         children = self.obj.ToolController
         children.append(self.obj.Operations)
         if hasattr(self.obj, 'Model'):

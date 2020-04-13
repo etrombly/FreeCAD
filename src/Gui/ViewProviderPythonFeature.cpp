@@ -385,8 +385,36 @@ bool ViewProviderPythonFeatureImp::claimChildren(std::vector<App::DocumentObject
     _FC_PY_CALL_CHECK(claimChildren,return(false));
 
     Base::PyGILStateLocker lock;
+    Base::Console().Warning("Called claimChildren\n");
     try {
         Py::Sequence list(Base::pyCall(py_claimChildren.ptr()));
+        for (Py::Sequence::iterator it = list.begin(); it != list.end(); ++it) {
+            PyObject* item = (*it).ptr();
+            if (PyObject_TypeCheck(item, &(App::DocumentObjectPy::Type))) {
+                App::DocumentObject* obj = static_cast<App::DocumentObjectPy*>(item)->getDocumentObjectPtr();
+                children.push_back(obj);
+            }
+        }
+    }
+    catch (Py::Exception&) {
+        if (PyErr_ExceptionMatches(PyExc_NotImplementedError)) {
+            PyErr_Clear();
+            return false;
+        }
+        Base::PyException e; // extract the Python error text
+        e.ReportException();
+    }
+
+    return true;
+}
+bool ViewProviderPythonFeatureImp::claimChildren3D(std::vector<App::DocumentObject*> &children) const 
+{
+    _FC_PY_CALL_CHECK(claimChildren3D,return(false));
+
+    Base::PyGILStateLocker lock;
+    Base::Console().Warning("Called claimChildren3D\n");
+    try {
+        Py::Sequence list(Base::pyCall(py_claimChildren3D.ptr()));
         for (Py::Sequence::iterator it = list.begin(); it != list.end(); ++it) {
             PyObject* item = (*it).ptr();
             if (PyObject_TypeCheck(item, &(App::DocumentObjectPy::Type))) {
