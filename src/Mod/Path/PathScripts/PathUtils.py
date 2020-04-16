@@ -306,14 +306,20 @@ def getEnvelope(partshape, subshape=None, depthparams=None):
             area = Path.Area(Fill=2, Coplanar=0).add(subshape)
             area.setPlane(makeWorkplane(partshape))
             PathLog.debug("About to section with params: {}".format(area.getParams()))
-            sec = area.makeSections(heights=[0.0], project=True)[0].getShape()
+            sec = area.makeSections(heights=[0.0], project=True)
+            if len(sec) == 0:
+                return None
+            sec = sec[0].getShape()
 
         PathLog.debug('partshapeZmin: {}, subshapeZMin: {}, zShift: {}'.format(partshape.BoundBox.ZMin, subshape.BoundBox.ZMin, zShift))
 
     else:
         area = Path.Area(Fill=2, Coplanar=0).add(partshape)
         area.setPlane(makeWorkplane(partshape))
-        sec = area.makeSections(heights=[0.0], project=True)[0].getShape()
+        sec = area.makeSections(heights=[0.0], project=True)
+        if len(sec) == 0:
+                return None
+        sec = sec[0].getShape()
 
     # If depthparams are passed, use it to calculate bottom and height of
     # envelope

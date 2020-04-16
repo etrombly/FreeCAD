@@ -279,6 +279,8 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
                                     custDepthparams = self._customDepthParams(obj, strDep + 0.5, finalDep)
 
                             # env = PathUtils.getEnvelope(base.Shape, subshape=profShape, depthparams=custDepthparams)
+                            if not numpy.isclose(abs(shape.normalAt(0, 0).z), 1):
+                                PathLog.warning("vertical face")
                             env = PathUtils.getEnvelope(shape, depthparams=custDepthparams)
                             tup = env, False, 'pathProfileFaces', angle, axis, strDep, finalDep
                             shapes.append(tup)
