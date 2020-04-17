@@ -38,7 +38,7 @@ Draft = LazyLoader('Draft', globals(), 'Draft')
 Part = LazyLoader('Part', globals(), 'Part')
 DraftGeomUtils = LazyLoader('DraftGeomUtils', globals(), 'DraftGeomUtils')
 
-PathLog.setLevel(PathLog.Level.INFO, PathLog.thisModule())
+PathLog.setLevel(PathLog.Level.DEBUG, PathLog.thisModule())
 # PathLog.trackModule(PathLog.thisModule())
 
 class FlattenError(Exception):
@@ -146,8 +146,6 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
                                     PathLog.error("unable to extract wire")
                     except FlattenError:
                         PathLog.error("Unable to flatten wire")
-                    else:
-                        PathLog.error(translate('PathProfileEdges', 'The selected edge(s) are inaccessible.'))
                         
 
             # Delete the temporary objects

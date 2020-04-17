@@ -1354,7 +1354,11 @@ std::vector<shared_ptr<Area> > Area::makeSections(
     if(!section_plane.IsNull())
         plane = findPlane(section_plane,trsf);
     else
-        plane = getPlane(&trsf);
+        try {
+            plane = getPlane(&trsf);
+        } catch(const Base::ValueError& e) {
+            
+        }
 
     if(plane.IsNull())
         throw Base::ValueError("failed to obtain section plane");
