@@ -50,6 +50,9 @@ class CrossSectionError(Exception):
 class ExtractWireError(Exception):
     pass
 
+class SeparateWireError(Exception):
+    pass
+
 # Qt translation handling
 def translate(context, text, disambig=None):
     return PySide.QtCore.QCoreApplication.translate(context, text, disambig)
@@ -140,7 +143,7 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
                                 except CrossSectionError:
                                     PathLog.error("Error getting cross section")
                                 except ExtractWireError:
-                                    PathLog.Error("unable to extract wire")
+                                    PathLog.error("unable to extract wire")
                     except FlattenError:
                         PathLog.error("Unable to flatten wire")
                     else:
@@ -571,7 +574,11 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
 
         # Break offset loop into two wires - one of which is the desired profile path wire.
         # (edgeIdxs0, edgeIdxs1) = self._separateWireAtVertexes(mainWire, ofstShp.Vertexes[vi0], ofstShp.Vertexes[vi1])
-        (edgeIdxs0, edgeIdxs1) = self._separateWireAtVertexes(mainWire, mainWire.Vertexes[vi0], mainWire.Vertexes[vi1])
+        try:
+            (edgeIdxs0, edgeIdxs1) = self._separateWireAtVertexes(mainWire, mainWire.Vertexes[vi0], mainWire.Vertexes[vi1])
+        except SeparateWireError:
+            PathLog.warning("unable to separate wires")
+            raise ExtractWireError
         edgs0 = list()
         edgs1 = list()
         for e in edgeIdxs0:
@@ -757,6 +764,8 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
                     else:
                         begIdx = e
                         break
+            if begIdx is None:
+                raise SeparateWireError
             # find first 3 edge and group all first wire edges
             endIdx = None
             for e in range(begIdx, lenE + begIdx):
