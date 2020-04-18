@@ -247,8 +247,7 @@ def select(op):
     opsel['Pocket'] = pocketselect
     opsel['Pocket 3D'] = pocketselect
     opsel['Pocket Shape'] = pocketselect
-    opsel['Profile Edges'] = eselect
-    opsel['Profile Faces'] = profileselect
+    opsel['Profile'] = profileselect
     opsel['Surface'] = surfaceselect
     opsel['Waterline'] = surfaceselect
     opsel['Adaptive'] = adaptiveselect
