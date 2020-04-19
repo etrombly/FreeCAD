@@ -37,9 +37,17 @@ from lazy_loader.lazy_loader import LazyLoader
 Part = LazyLoader('Part', globals(), 'Part')
 DraftGeomUtils = LazyLoader('DraftGeomUtils', globals(), 'DraftGeomUtils')
 
-PathLog.setLevel(PathLog.Level.INFO, PathLog.thisModule())
+PathLog.setLevel(PathLog.Level.DEBUG, PathLog.thisModule())
 # PathLog.trackModule(PathLog.thisModule())
 
+class FlattenError(Exception):
+    pass
+
+class CrossSectionError(Exception):
+    pass
+
+class ExtractionError(Exception):
+    pass
 
 # Qt translation handling
 def translate(context, text, disambig=None):
@@ -116,7 +124,6 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
         inaccessible = translate('PathProfile', 'The selected edge(s) are inaccessible. If multiple, re-ordering selection might work.')
         if PathLog.getLevel(PathLog.thisModule()) == 4:
             self.tmpGrp = FreeCAD.ActiveDocument.addObject('App::DocumentObjectGroup', 'tmpDebugGrp')
-            tmpGrpNm = self.tmpGrp.Name
         self.JOB = PathUtils.findParentJob(obj)
 
         self.offsetExtra = abs(obj.OffsetExtra.Value)
@@ -133,73 +140,71 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
         shapes = []
         if obj.Base:
             basewires = []
+            holes = []
+            stock = PathUtils.findParentJob(obj).Stock
+            strDep = min(obj.StartDepth.Value, stock.Shape.BoundBox.ZMax)
+            if obj.EnableRotation == 'Off':
+                angle = 0.0
+                axis = 'X'
 
-            zMin = None
             for (base, sublist) in obj.Base:
                 edgelist = []
                 for sub in sublist:
                     subShape = getattr(base.Shape, sub)
                     if isinstance(subShape, Part.Face):
-                        edgelist.extend(subShape.OuterWire.Edges)
-                        # check for holes here
-                    else:
+                        basewires.append((subShape, [subShape.OuterWire]))
+                        for wire in subShape.Wires:
+                            holes.append((subShape, wire))
+                    elif isinstance(subShape, Part.Edge):
                         edgelist.append(subShape)
-                basewires.append((base, DraftGeomUtils.findWires(edgelist)))
-                if zMin is None or base.Shape.BoundBox.ZMin < zMin:
-                    zMin = base.Shape.BoundBox.ZMin
+                if edgelist:
+                    basewires.append((base.Shape, DraftGeomUtils.findWires(edgelist)))
 
             PathLog.debug('PathProfileEdges areaOpShapes():: len(basewires) is {}'.format(len(basewires)))
-            for base, wires in basewires:
+            for baseShape, wires in basewires:
                 for wire in wires:
-                    if wire.isClosed() is True:
-                        # f = Part.makeFace(wire, 'Part::FaceMakerSimple')
-                        # if planar error, Comment out previous line, uncomment the next two
-                        (origWire, flatWire) = self._flattenWire(obj, wire, obj.FinalDepth.Value)
-                        f = origWire.Wires[0]
-                        if f is not False:
-                            # shift the compound to the bottom of the base object for proper sectioning
-                            zShift = zMin - f.BoundBox.ZMin
-                            newPlace = FreeCAD.Placement(FreeCAD.Vector(0, 0, zShift), f.Placement.Rotation)
-                            f.Placement = newPlace
-                            env = PathUtils.getEnvelope(base.Shape, subshape=f, depthparams=self.depthparams)
+                    try:
+                        flatWire = self._flattenWire(obj, wire, strDep)
+                        if PathLog.getLevel(PathLog.thisModule()) == 4:
+                                        os = FreeCAD.ActiveDocument.addObject('Part::Feature', 'tmpFlatWire')
+                                        os.Shape = flatWire
+                                        os.purgeTouched()
+                                        self.tmpGrp.addObject(os)
+                    except FlattenError:
+                        PathLog.error(translate('PathProfile', 'Unable to flatten wire.'))
+                    if flatWire.isClosed():
+                        try:
+                            env = PathUtils.getEnvelope(baseShape, subshape=flatWire, depthparams=self.depthparams)
                             shapes.append((env, False))
-                        else:
-                            PathLog.error(inaccessible)
+                        except PathUtils.ProjectionError:
+                            PathLog.error(translate('PathProfile', 'Unable to get envelope of object.'))
                     else:
                         if self.JOB.GeometryTolerance.Value == 0.0:
                             msg = self.JOB.Label + '.GeometryTolerance = 0.0.'
                             msg += translate('PathProfileEdges', 'Please set to an acceptable value greater than zero.')
                             PathLog.error(msg)
                         else:
-                            cutWireObjs = False
-                            flattened = self._flattenWire(obj, wire, obj.FinalDepth.Value)
-                            if flattened:
-                                (origWire, flatWire) = flattened
-                                if PathLog.getLevel(PathLog.thisModule()) == 4:
-                                    os = FreeCAD.ActiveDocument.addObject('Part::Feature', 'tmpFlatWire')
-                                    os.Shape = flatWire
-                                    os.purgeTouched()
-                                    self.tmpGrp.addObject(os)
-                                cutShp = self._getCutAreaCrossSection(obj, base, origWire, flatWire)
-                                if cutShp is not False:
-                                    cutWireObjs = self._extractPathWire(obj, base, flatWire, cutShp)
+                            try:
+                                cutShp = self._getCutAreaCrossSection(obj, baseShape, wire, flatWire)
+                                cutWireObjs = self._extractPathWire(obj, flatWire, cutShp)
+                                for cW in cutWireObjs:
+                                    shapes.append((cW, False))
+                                    self.profileEdgesIsOpen = True
+                            except CrossSectionError:
+                                PathLog.error(translate('PathProfile', 'Unable to get cross section of wire.'))
+                            except ExtractionError:
+                                PathLog.error(translate('PathProfile', 'Unable to extract wire path.'))
 
-                                if cutWireObjs is not False:
-                                    for cW in cutWireObjs:
-                                        shapes.append((cW, False))
-                                        self.profileEdgesIsOpen = True
-                                else:
-                                    PathLog.error(inaccessible)
-                            else:
-                                PathLog.error(inaccessible)
+        for shape, wire in holes:
+            f = Part.makeFace(wire, 'Part::FaceMakerSimple')
+            drillable = PathUtils.isDrillable(shape, wire)
+            if (drillable and obj.processCircles) or (not drillable and obj.processHoles):
+                env = PathUtils.getEnvelope(shape, subshape=f, depthparams=self.depthparams)
+                tup = env, True, 'pathProfile', angle, axis, strDep, obj.FinalDepth.Value
+                shapes.append(tup)
 
-            # Delete the temporary objects
-            if PathLog.getLevel(PathLog.thisModule()) == 4:
-                if FreeCAD.GuiUp:
-                    import FreeCADGui
-                    FreeCADGui.ActiveDocument.getObject(tmpGrpNm).Visibility = False
-                self.tmpGrp.purgeTouched()
-
+        if PathLog.getLevel(PathLog.thisModule()) == 4:
+            self.tmpGrp.Visibility = False
         return shapes
 
     def _flattenWire(self, obj, wire, trgtDep):
@@ -216,19 +221,19 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
 
             # Create cross-section of shape and translate
             sliceZ = wire.BoundBox.ZMin + (extFwdLen / 2)
-            crsectFaceShp = self._makeCrossSection(mbbEXT, sliceZ, trgtDep)
-            if crsectFaceShp is not False:
-                return (wire, crsectFaceShp)
-            else:
-                return False
+            try:
+                crsectFaceShp = self._makeCrossSection(mbbEXT, sliceZ, trgtDep)
+                return crsectFaceShp
+            except CrossSectionError:
+                raise FlattenError
         else:
             srtWire = Part.Wire(Part.__sortEdges__(wire.Edges))
             srtWire.translate(FreeCAD.Vector(0, 0, trgtDep - srtWire.BoundBox.ZMin))
 
-        return (wire, srtWire)
+        return srtWire
 
     # Open-edges methods
-    def _getCutAreaCrossSection(self, obj, base, origWire, flatWire):
+    def _getCutAreaCrossSection(self, obj, baseShape, origWire, flatWire):
         PathLog.debug('_getCutAreaCrossSection()')
         FCAD = FreeCAD.ActiveDocument
         tolerance = self.JOB.GeometryTolerance.Value
@@ -241,9 +246,9 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
         wBB = origWire.BoundBox
         minArea = (self.ofstRadius - tolerance)**2 * math.pi
 
-        useWire = origWire.Wires[0]
+        useWire = flatWire.Wires[0]
         numOrigEdges = len(useWire.Edges)
-        sdv = wBB.ZMax
+        sdv = fwBB.ZMax
         fdv = obj.FinalDepth.Value
         extLenFwd = sdv - fdv
         WIRE = flatWire.Wires[0]
@@ -280,23 +285,27 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
             ecp = FreeCAD.Vector(endE.Vertexes[1].X, endE.Vertexes[1].Y, fdv)
 
         # Create intersection tags for determining which side of wire to cut
-        (begInt, begExt, iTAG, eTAG) = self._makeIntersectionTags(useWire, numOrigEdges, fdv)
+        (begInt, begExt, iTAG, eTAG) = self._makeIntersectionTags(flatWire, numOrigEdges, fdv)
         if not begInt or not begExt:
-            return False
+            raise CrossSectionError
         self.iTAG = iTAG
         self.eTAG = eTAG
 
         # Create extended wire boundbox, and extrude
-        extBndbox = self._makeExtendedBoundBox(wBB, bbBfr, fdv)
+        extBndbox = self._makeExtendedBoundBox(fwBB, bbBfr, fdv)
         extBndboxEXT = extBndbox.extrude(FreeCAD.Vector(0, 0, extLenFwd))
 
+        PathLog.warning("bfr: %f, fdv: %f, ext: %f zmin: %f zmax %f" % (bbBfr, fdv, extLenFwd, extBndboxEXT.BoundBox.ZMin, extBndboxEXT.BoundBox.ZMax))
+
         # Cut model(selected edges) from extended edges boundbox
-        cutArea = extBndboxEXT.cut(base.Shape)
+        cutArea = extBndboxEXT.cut(baseShape)
         if PathLog.getLevel(PathLog.thisModule()) == 4:
             CA = FCAD.addObject('Part::Feature', 'tmpCutArea')
             CA.Shape = cutArea
             CA.recompute()
             CA.purgeTouched()
+            CA = FCAD.addObject('Part::Feature', 'tmpbndbox')
+            CA.Shape = extBndboxEXT
             self.tmpGrp.addObject(CA)
 
 
@@ -305,27 +314,27 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
         botFc = list()
         bbZMax = cutArea.BoundBox.ZMax
         bbZMin = cutArea.BoundBox.ZMin
-        for f in range(0, len(cutArea.Faces)):
-            FcBB = cutArea.Faces[f].BoundBox
+        for face in cutArea.Faces:
+            FcBB = face.BoundBox
             if abs(FcBB.ZMax - bbZMax) < tolerance and abs(FcBB.ZMin - bbZMax) < tolerance:
-                topFc.append(f)
+                topFc.append(face)
             if abs(FcBB.ZMax - bbZMin) < tolerance and abs(FcBB.ZMin - bbZMin) < tolerance:
-                botFc.append(f)
+                botFc.append(face)
         if len(topFc) == 0:
             PathLog.error('Failed to identify top faces of cut area.')
-            return False
-        topComp = Part.makeCompound([cutArea.Faces[f] for f in topFc])
+            raise CrossSectionError
+        topComp = Part.makeCompound(topFc)
         topComp.translate(FreeCAD.Vector(0, 0, fdv - topComp.BoundBox.ZMin))  # Translate face to final depth
         if len(botFc) > 1:
             PathLog.debug('len(botFc) > 1')
             bndboxFace = Part.Face(extBndbox.Wires[0])
             tmpFace = Part.Face(extBndbox.Wires[0])
-            for f in botFc:
-                Q = tmpFace.cut(cutArea.Faces[f])
+            for face in botFc:
+                Q = tmpFace.cut(face)
                 tmpFace = Q
             botComp = bndboxFace.cut(tmpFace)
         else:
-            botComp = Part.makeCompound([cutArea.Faces[f] for f in botFc])  # Part.makeCompound([CA.Shape.Faces[f] for f in botFc])
+            botComp = Part.makeCompound(botFc)
         botComp.translate(FreeCAD.Vector(0, 0, fdv - botComp.BoundBox.ZMin))  # Translate face to final depth
 
         # Make common of the two
@@ -384,7 +393,7 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
 
             if wi is None:
                 PathLog.error('The cut area cross-section wire does not coincide with selected edge. Wires[] index is None.')
-                return False
+                raise CrossSectionError
             else:
                 PathLog.debug('Cross-section Wires[] index is {}.'.format(wi))
 
@@ -396,7 +405,7 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
         # verify that wire chosen is not inside the physical model
         if wi > 0:  # and isInterior is False:
             PathLog.debug('Multiple wires in cut area. First choice is not 0. Testing.')
-            testArea = fcShp.cut(base.Shape)
+            testArea = fcShp.cut(baseShape)
 
             isReady = self._checkTagIntersection(iTAG, eTAG, self.cutSide, testArea)
             PathLog.debug('isReady {}.'.format(isReady))
@@ -444,7 +453,7 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
                 return True
         return False
 
-    def _extractPathWire(self, obj, base, flatWire, cutShp):
+    def _extractPathWire(self, obj, flatWire, cutShp):
         PathLog.debug('_extractPathWire()')
 
         subLoops = list()
@@ -471,7 +480,7 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
             osArea = ofstShp.Area
         except Exception as ee:
             PathLog.error('No area to offset shape returned.')
-            return False
+            raise ExtractionError
 
         if PathLog.getLevel(PathLog.thisModule()) == 4:
             os = FreeCAD.ActiveDocument.addObject('Part::Feature', 'tmpOffsetShape')
@@ -788,7 +797,7 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
                 comp.translate(FreeCAD.Vector(0, 0, zHghtTrgt - comp.BoundBox.ZMin))
             return comp
 
-        return False
+        raise CrossSectionError
 
     def _makeExtendedBoundBox(self, wBB, bbBfr, zDep):
         p1 = FreeCAD.Vector(wBB.XMin - bbBfr, wBB.YMin - bbBfr, zDep)
