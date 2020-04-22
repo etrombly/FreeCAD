@@ -152,9 +152,12 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
                 for sub in sublist:
                     subShape = getattr(base.Shape, sub)
                     if isinstance(subShape, Part.Face):
+                        outerMass = subShape.OuterWire.Mass
                         basewires.append((subShape, [subShape.OuterWire]))
                         for wire in subShape.Wires:
-                            holes.append((subShape, wire))
+                            # hacky way to figure out if it's the outerwire
+                            if wire.Mass != subShape.OuterWire.Mass:
+                                holes.append((subShape, wire))
                     elif isinstance(subShape, Part.Edge):
                         edgelist.append(subShape)
                 if edgelist:
@@ -195,13 +198,13 @@ class ObjectProfile(PathProfileBase.ObjectProfile):
                             except ExtractionError:
                                 PathLog.error(translate('PathProfile', 'Unable to extract wire path.'))
 
-        for shape, wire in holes:
-            f = Part.makeFace(wire, 'Part::FaceMakerSimple')
-            drillable = PathUtils.isDrillable(shape, wire)
-            if (drillable and obj.processCircles) or (not drillable and obj.processHoles):
-                env = PathUtils.getEnvelope(shape, subshape=f, depthparams=self.depthparams)
-                tup = env, True, 'pathProfile', angle, axis, strDep, obj.FinalDepth.Value
-                shapes.append(tup)
+            for shape, wire in holes:
+                f = Part.makeFace(wire, 'Part::FaceMakerSimple')
+                drillable = PathUtils.isDrillable(shape, wire)
+                if (drillable and obj.processCircles) or (not drillable and obj.processHoles):
+                    env = PathUtils.getEnvelope(shape, subshape=f, depthparams=self.depthparams)
+                    tup = env, True, 'pathProfile', angle, axis, strDep, obj.FinalDepth.Value
+                    shapes.append(tup)
 
         if PathLog.getLevel(PathLog.thisModule()) == 4:
             self.tmpGrp.Visibility = False
