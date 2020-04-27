@@ -46,7 +46,7 @@ class TaskPanelOpPage(PathProfileBaseGui.TaskPanelOpPage):
 Command = PathOpGui.SetupOperation('Profile',
         PathProfile.Create,
         TaskPanelOpPage,
-        'Path-Profile',
+        'Path-Profile-Face',
         QtCore.QT_TRANSLATE_NOOP("PathProfile", "Profile"),
         QtCore.QT_TRANSLATE_NOOP("PathProfile", "Profile"),
         PathProfile.SetupProperties)
