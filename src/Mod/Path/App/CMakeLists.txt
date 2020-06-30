@@ -66,6 +66,8 @@ SET(Path_SRCS
     Command.h
     Path.cpp
     Path.h
+    Nesting.h
+    Nesting.cpp
     Tool.cpp
     Tool.h
     Tooltable.cpp
