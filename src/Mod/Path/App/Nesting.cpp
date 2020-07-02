@@ -238,7 +238,7 @@ Individual GeneticAlgo::randomWeightedIndividual(boost::optional<const Individua
     auto pop = this->population;
 
     if(exclude){
-        auto excluded = static_cast<const Individual&>(exclude.get());
+        const Individual& excluded = *exclude;
         //pop.individuals.erase(std::remove(pop.individuals.begin(), pop.individuals.end(), excluded), pop.individuals.end());
     }
 
