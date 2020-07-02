@@ -28,6 +28,7 @@
 #include <Base/BoundBox.h>
 #include <Base/Persistence.h>
 #include <Base/Vector3D.h>
+#include <boost/optional.hpp>
 # include <TopoDS_Shape.hxx>
 
 namespace Path
@@ -71,10 +72,16 @@ namespace Path
             //GeneticAlgo ga;
     };
 
+    struct PathExport Individual {
+        TopoDS_Shape placement;
+        float rotation;
+        unsigned int id;
+        std::string source;
+        float fitness;
+    };
+
     struct PathExport Population {
-        std::vector<TopoDS_Shape> placement;
-        std::vector<float> angles;
-        std::vector<std::string> ids;
+        std::vector<Individual> individuals;
     };
     
     class PathExport GeneticAlgo : public Base::Persistence {
@@ -94,9 +101,11 @@ namespace Path
             // interface
             Population mutate(const Population&);
             std::vector<Population> mate (const Population&, const Population&);
+            void generation();
+            Individual randomWeightedIndividual(boost::optional<const Individual&>);
 
         protected:
-            std::vector<Population> population;
+            Population population;
             NestingConfig config;
     };
 

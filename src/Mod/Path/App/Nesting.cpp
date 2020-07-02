@@ -26,6 +26,7 @@
 #ifndef _PreComp_
 # include <boost/regex.hpp>
 #endif
+#include <boost/optional.hpp>
 
 #include <Base/Writer.h>
 #include <Base/Reader.h>
@@ -105,16 +106,22 @@ GeneticAlgo::GeneticAlgo(const GeneticAlgo& otherGA)
     *this = otherGA;
 }
 
-GeneticAlgo::GeneticAlgo(const std::vector<TopoDS_Shape>& adam, const std::vector<std::string>& ids, const NestingConfig& config)
+GeneticAlgo::GeneticAlgo(const std::vector<TopoDS_Shape>& adam, const std::vector<std::string>& sources, const NestingConfig& config)
 {
     this->config = config;
-    std::vector<float> angles;
+    Population population;
     for(unsigned int i=0; i<adam.size(); i++){
 			float angle = floor(rand()*this->config.rotations)*(360/this->config.rotations);
-			angles.push_back(angle);
+            population.individuals.push_back(Individual{adam[i], angle, i, sources[i], 0});
 	}
-    std::vector<Population> population;
-    population.push_back(Population{adam, angles, ids});
+
+    /*
+    while(this.population.length < config.populationSize){
+        var mutant = this.mutate(this.population[0]);
+        this.population.push(mutant);
+    }
+    */
+
     this->population = population;
 }
 
@@ -140,22 +147,22 @@ void GeneticAlgo::Restore(XMLReader &reader)
 
 }
 
-Population GeneticAlgo::mutate(const Population& individual){
-    Population clone = individual;
-    for(unsigned int i=0; i<clone.placement.size(); i++){
+Population GeneticAlgo::mutate(const Population& population){
+    Population clone = population;
+    for(unsigned int i=0; i<clone.individuals.size(); i++){
         if(rand() < 0.01*this->config.mutationRate){
             // swap current part with next part
             unsigned int j = i+1;
             
-            if(j < clone.placement.size()){
-                auto temp = clone.placement[i];
-                clone.placement[i] = clone.placement[j];
-                clone.placement[j] = temp;
+            if(j < clone.individuals.size()){
+                auto temp = clone.individuals[i].placement;
+                clone.individuals[i].placement = clone.individuals[j].placement;
+                clone.individuals[j].placement = temp;
             }
         }
         
         if(rand() < 0.01*this->config.mutationRate){
-            clone.angles[i] = floor(rand()*this->config.rotations)*(360/this->config.rotations);
+            clone.individuals[i].rotation = floor(rand()*this->config.rotations)*(360/this->config.rotations);
         }
     }
     
@@ -164,45 +171,91 @@ Population GeneticAlgo::mutate(const Population& individual){
 
 struct compare
 {
-	std::string key;
-	compare(std::string const &i): key(i) { }
+	Individual key;
+	compare(Individual const &i): key(i) { }
 
-	bool operator()(std::string const &i)
+	bool operator()(Individual const &i)
 	{
-		return (i == key);
+		return (i.id == key.id);
 	}
 };
 
 // single point crossover
 std::vector<Population> GeneticAlgo::mate (const Population& male, const Population& female){
-    auto cutpoint = round(std::min(std::max((double)rand(), 0.1), 0.9)*(male.placement.size()-1));
+    auto cutpoint = round(std::min(std::max((double)rand(), 0.1), 0.9)*(male.individuals.size()-1));
     
-    auto gene1 = std::vector<TopoDS_Shape>(male.placement.begin(), male.placement.begin() + cutpoint);
-    auto rot1 = std::vector<float>(male.angles.begin(), male.angles.begin() + cutpoint);
-    auto ids1 = std::vector<std::string>(male.ids.begin(), male.ids.begin() + cutpoint);
-
-    auto gene2 = std::vector<TopoDS_Shape>(female.placement.begin(), female.placement.begin() + cutpoint);
-    auto rot2 = std::vector<float>(female.angles.begin(), female.angles.begin() + cutpoint);
-    auto ids2 = std::vector<std::string>(female.ids.begin(), female.ids.begin() + cutpoint);
+    auto maleIndividuals = std::vector<Individual>(male.individuals.begin(), male.individuals.begin() + cutpoint);
+    auto clone1 = Population{maleIndividuals};
+    auto femaleIndividuals = std::vector<Individual>(female.individuals.begin(), female.individuals.begin() + cutpoint);
+    auto clone2 = Population{femaleIndividuals};
     
-    for(unsigned int i=0; i<female.placement.size(); i++){
-        if(std::none_of(ids1.begin(), ids1.end(),  compare(female.ids[i]))){
-            gene1.push_back(female.placement[i]);
-            rot1.push_back(female.angles[i]);
-            ids1.push_back(female.ids[i]);
+    for(unsigned int i=0; i<female.individuals.size(); i++){
+        if(std::none_of(clone1.individuals.begin(), clone1.individuals.end(),  compare(female.individuals[i]))){
+            clone1.individuals.push_back(female.individuals[i]);
         }
     }
     
-    for(unsigned int i=0; i<male.placement.size(); i++){
-        if(std::none_of(ids2.begin(), ids2.end(),  compare(male.ids[i]))){
-            gene2.push_back(male.placement[i]);
-            rot2.push_back(male.angles[i]);
-            ids2.push_back(male.ids[i]);
+    for(unsigned int i=0; i<male.individuals.size(); i++){
+        if(std::none_of(clone2.individuals.begin(), clone2.individuals.end(),  compare(male.individuals[i]))){
+            clone2.individuals.push_back(male.individuals[i]);
         }
     }
     
    std::vector<Population> result;
-   result.push_back(Population{gene1, rot1, ids1});
-   result.push_back(Population{gene2, rot2, ids2});
+   result.push_back(clone1);
+   result.push_back(clone2);
    return result;
+}
+
+bool populationSort (Individual i,Individual j) { return (i.fitness<j.fitness); }
+
+void GeneticAlgo::generation() {
+    std::sort (this->population.individuals.begin(), this->population.individuals.end(), populationSort);
+
+    Population newpopulation;
+
+    newpopulation.individuals.push_back(this->population.individuals[0]);
+    
+    while(newpopulation.individuals.size() < this->population.individuals.size()){
+        auto male = this->randomWeightedIndividual(boost::none);
+        auto female = this->randomWeightedIndividual(male);
+        
+        // each mating produces two children
+        //auto children = this->mate(male, female);
+        
+        // slightly mutate children
+        //newpopulation.individuals.push_back(this->mutate(children[0]));
+            
+        if(newpopulation.individuals.size() < this->population.individuals.size()){
+            //newpopulation.individuals.push_back(this->mutate(children[1]));
+        }
+    }
+            
+    this->population = newpopulation;
+}
+
+Individual GeneticAlgo::randomWeightedIndividual(boost::optional<const Individual&> exclude = boost::none){
+    auto pop = this->population;
+
+    if(exclude){
+        auto excluded = static_cast<const Individual&>(exclude.get());
+        //pop.individuals.erase(std::remove(pop.individuals.begin(), pop.individuals.end(), excluded), pop.individuals.end());
+    }
+
+    float random = rand();
+    
+    float lower = 0;
+    float weight = 1/pop.individuals.size();
+    float upper = weight;
+    
+    for(unsigned int i=0; i<pop.individuals.size(); i++){
+        // if the random number falls between lower and upper bounds, select this individual
+        if(random> lower && random < upper){
+            return pop.individuals[i];
+        }
+        lower = upper;
+        upper += 2*weight * ((pop.individuals.size()-i)/pop.individuals.size());
+    }
+		
+    return pop.individuals[0];
 }
