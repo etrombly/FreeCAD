@@ -471,6 +471,7 @@ BOOST_PYTHON_MODULE(area) {
         .def("Subtract",&CArea::Subtract)
         .def("Intersect",&CArea::Intersect)
         .def("Union",&CArea::Union)
+		.def("MinkowskiSum",&CArea::MinkowskiSum)
         .def("Offset",&CArea::Offset)
         .def("FitArcs",&CArea::FitArcs)
         .def("text", &print_area)

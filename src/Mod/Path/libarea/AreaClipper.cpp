@@ -422,6 +422,16 @@ void CArea::Union(const CArea& a2)
 	SetFromResult(*this, solution);
 }
 
+void CArea::MinkowskiSum(const CArea& a2)
+{
+	TPolyPolygon pp1, pp2;
+	MakePolyPoly(*this, pp1);
+	MakePolyPoly(a2, pp2);
+	TPolyPolygon solution;
+	ClipperLib::MinkowskiSum(pp1[0], pp2[0], solution, true);
+	SetFromResult(*this, solution);
+}
+
 // static
 CArea CArea::UniteCurves(std::list<CCurve> &curves)
 {

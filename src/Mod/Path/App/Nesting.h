@@ -25,6 +25,7 @@
 #define PATH_Nesting_H
 
 #include "Command.h"
+#include "../libarea/clipper.hpp"
 #include <Base/BoundBox.h>
 #include <Base/Persistence.h>
 #include <Base/Vector3D.h>
@@ -33,7 +34,6 @@
 
 namespace Path
 {
-
     /** Configuration values for the nesting algorithm */
     struct PathExport NestingConfig {
         int clipperScale;
@@ -63,6 +63,8 @@ namespace Path
             virtual unsigned int getMemSize (void) const;
             virtual void Save (Base::Writer &/*writer*/) const;
             virtual void Restore(Base::XMLReader &/*reader*/);
+
+            void nest(TopoDS_Shape&, ClipperLib::Paths&);
         
         protected:
             NestingConfig config;

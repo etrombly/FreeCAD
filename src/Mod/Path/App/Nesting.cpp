@@ -95,6 +95,10 @@ void Nesting::Restore(XMLReader &reader)
 
 }
 
+void nest(TopoDS_Shape& stock, ClipperLib::Paths& parts){
+
+}
+
 TYPESYSTEM_SOURCE(Path::GeneticAlgo, Base::Persistence)
 
 GeneticAlgo::GeneticAlgo()
