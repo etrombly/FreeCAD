@@ -31,6 +31,7 @@ __doc__ = "Support functions and classes for 3D Surface and Waterline operations
 __contributors__ = ""
 
 import FreeCAD
+import FreeCADGui
 from PySide import QtCore
 import Path
 import PathScripts.PathLog as PathLog
@@ -498,6 +499,10 @@ class ProcessSelectedFaces:
 
     def preProcessModel(self, module):
         PathLog.debug('preProcessModel()')
+
+        statusBar = FreeCADGui.getMainWindow().statusBar()
+        statusBar.showMessage("Pre-processing model")
+        FreeCADGui.updateGui()
 
         if not self._isReady(module):
             return False

@@ -469,6 +469,9 @@ class ObjectSurface(PathOp.ObjectOp):
         CMDS = list()
         modelVisibility = list()
         FCAD = FreeCAD.ActiveDocument
+        statusBar = FreeCADGui.getMainWindow().statusBar()
+        statusBar.showMessage("Starting Surface Operation")
+        FreeCADGui.updateGui()
 
         try:
             dotIdx = __name__.index('.') + 1
@@ -902,6 +905,10 @@ class ObjectSurface(PathOp.ObjectOp):
         for the various cut patterns.'''
         PathLog.debug('_planarPerformOclScan()')
         SCANS = list()
+
+        statusBar = FreeCADGui.getMainWindow().statusBar()
+        statusBar.showMessage("Performing opencamlib scan")
+        FreeCADGui.updateGui()
 
         if offsetPoints or obj.CutPattern == 'Offset':
             PNTSET = PathSurfaceSupport.pathGeomToOffsetPointSet(obj, pathGeom)
