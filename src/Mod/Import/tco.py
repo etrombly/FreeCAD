@@ -24,7 +24,6 @@ def open(filename, doc=None):
     config = json.load(json_text)
     data = configparser.ConfigParser()
     data.read(filename)
-    FreeCAD.Console.PrintMessage(data.sections())
     config["parts"]["base"] = ""
     for part in config["parts"]:
         tris = []
