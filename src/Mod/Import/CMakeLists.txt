@@ -44,6 +44,7 @@ set(Import_Scripts
     Init.py
     gzip_utf8.py
     stepZ.py
+    tco.py
 )
 
 if(BUILD_GUI)
