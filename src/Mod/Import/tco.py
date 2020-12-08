@@ -23,10 +23,11 @@ def open(filename, doc=None):
     config["parts"]["base"] = ""
     for part in config["parts"]:
         tris = []
+        padding = int(data[part]["KeyFormat"][1:])
         for line in data[part]:
             if line.startswith("t"):
                 vecs = data[part][line].split(",")
-                vecs = [data[part]["v%04d" % int(vec)] for vec in vecs]
+                vecs = [data[part]["v" + vec.zfill(padding)] for vec in vecs]
                 tris.append([[float(point) for point in vec.split(",")] for vec in vecs])
         # read tris here
         mesh = Mesh.Mesh(tris)
