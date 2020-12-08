@@ -13,10 +13,6 @@ else:  # six.PY2
 __all__ = ["TCOFile","open"]
 
 def open(filename, doc=None):
-    """Shorthand for GzipFile(filename, mode, compresslevel).
-    The filename argument is required; mode defaults to 'rb'
-    and compresslevel defaults to 9.
-    """
     split_file = os.path.split(filename)
     base = os.path.splitext(split_file[1])[0]
     json_file = os.path.join(split_file[0], base + ".json")
