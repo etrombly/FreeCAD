@@ -1,5 +1,5 @@
 <RCC>
     <qresource> 
-        <file>ui/preferences-import.ui</file>
+        <file>ui/tco_export.ui</file>
     </qresource>
 </RCC> 
